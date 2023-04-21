@@ -3,7 +3,7 @@
 RoboMaster Armor Detector Based On Yolov8 is a detector that can detect robot’s armor and four keypoints of the armor’s light. The detector is based on Yolov8 and is trained on RoboMaster dataset. The detector is used in RoboMaster 2023 competition.
 
 ## Demo
-![](data/armor_blue_1.jpg)
+![](data/blue_1.jpg)
 
 ## Requirements
 - Python >= 3.7
