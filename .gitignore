@@ -1,3 +1,4 @@
-datasets
+datasets/armor-four-points/images
+datasets/armor-four-points/labels
 runs
-wandb
+__pycache__
