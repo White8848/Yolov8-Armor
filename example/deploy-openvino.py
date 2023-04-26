@@ -18,7 +18,7 @@ label_map = []
 kpt_shape: Tuple = []
 
 
-def plot_one_box(box: np.ndarray, img: np.ndarray, color: Tuple[int, int, int] = None, label: str = None, line_thickness: int = 5):
+def plot_one_box(box: np.ndarray, keypoints:np.ndarray, img: np.ndarray, color: Tuple[int, int, int] = None, label: str = None, line_thickness: int = 5):
     """
     Helper function for drawing single bounding box on image
     Parameters:
@@ -35,7 +35,16 @@ def plot_one_box(box: np.ndarray, img: np.ndarray, color: Tuple[int, int, int] =
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
-    
+    for i, k in enumerate(keypoints):
+            color_k = color or [random.randint(0, 255) for _ in range(3)]
+            x_coord, y_coord = k[0], k[1]
+            if x_coord % img.shape[1] != 0 and y_coord % img.shape[0] != 0:
+                if len(k) == 3:
+                    conf = k[2]
+                    if conf < 0.5:
+                        continue
+                cv2.circle(img, (int(x_coord), int(y_coord)), 3, color_k, -1, lineType=cv2.LINE_AA)
+
     if label:
         tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
@@ -57,14 +66,13 @@ def draw_results(results: Dict, source_image: np.ndarray, label_map: Dict):
 
     """
     boxes = results["det"]
-    print(boxes.shape)
     keypoints = results["keypoints"]
     h, w = source_image.shape[:2]
     for idx, (*xyxy, conf, lbl) in enumerate(boxes):
         label = f'{label_map[int(lbl)]} {conf:.2f}'
-        print(xyxy)
+        *keypoints, = keypoints[idx]
         source_image = plot_one_box(
-            xyxy, source_image, label=label, color=colors(int(lbl)), line_thickness=1)
+            xyxy, keypoints, source_image, label=label, color=colors(int(lbl)), line_thickness=1)
     return source_image
 
 
@@ -200,7 +208,7 @@ def postprocess(
         else:
             pred[:, :4] = ops.scale_boxes(input_hw, pred[:, :4], shape).round()
             pred_kpts = pred[:, 6:].view(
-                len(pred), *kpt_shape) if len(pred) else pred[:, 6:] 
+                len(pred), *kpt_shape) if len(pred) else pred[:, 6:]
             pred_kpts = ops.scale_coords(input_hw, pred_kpts, shape)
             results.append(
                 {"det": pred[:, :6].numpy(), "keypoints": pred_kpts})
@@ -217,7 +225,7 @@ def detect(image: np.ndarray, model: Model):
         detections (np.ndarray): detected boxes in format [x1, y1, x2, y2, score, label]
     """
     preprocessed_image = preprocess_image(image)
-    input_tensor =  image_to_tensor(preprocessed_image)
+    input_tensor = image_to_tensor(preprocessed_image)
     result = model(input_tensor)
     preds = result[model.output(0)]
     input_hw = input_tensor.shape[2:]
@@ -227,7 +235,7 @@ def detect(image: np.ndarray, model: Model):
 
 
 def main(openvino_model, input_path):
-    
+
     global label_map, kpt_shape
 
     # Load YOLOv8 model for label map, if you needn't display labels, you can remove this part
